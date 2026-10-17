@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1051936579548",
+    "project_id": "onionstreak-eec1e",
+    "storage_bucket": "onionstreak-eec1e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1051936579548:android:e5edbb3117aaa5e37ff919",
+        "android_client_info": {
+          "package_name": "com.example.onionstreak"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvPy84ebrGhkXP0Z6YRJ5RgaL-JY77tIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
