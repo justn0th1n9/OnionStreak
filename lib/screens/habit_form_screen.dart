@@ -73,7 +73,6 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     }
   }
 
-  Future<void> _pilihJam() async {
     Future<void> _tambahJam() async {
     if (_pengingat.length >= kMaksPengingat) return;
     final t = await showTimePicker(
