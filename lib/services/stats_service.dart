@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/frequency.dart';
 import '../models/habit.dart';
+import '../models/habit_log.dart';
 import '../utils/tanggal.dart';
 import 'streak_calculator.dart';
 
@@ -108,23 +109,108 @@ class StatsService {
   }
 
   static List<BadgeInfo> lencana(
-      List<Habit> habits, Map<String, Set<String>> done, DateTime today) {
+      List<Habit> habits, Map<String, Set<String>> done, DateTime today,
+      {Map<String, Map<String, HabitLog>> logs = const {}}) {
     var total = 0, terpanjang = 0;
     var bangkit = false;
+    final perHari = <String, int>{}; // tanggal -> jumlah centang semua kebiasaan
     for (final h in habits) {
       final d = done[h.id] ?? <String>{};
       total += d.length;
+      for (final k in d) {
+        perHari[k] = (perHari[k] ?? 0) + 1;
+      }
       final s = StreakCalculator.hitung(h, d, today);
       final hari = s.perMinggu ? s.longest * 7 : s.longest;
       if (hari > terpanjang) terpanjang = hari;
       if (s.runs.where((r) => r >= 3).length >= 2) bangkit = true;
     }
+
+    // Lima sekaligus: 5 centang atau lebih dalam satu hari.
+    final limaSekaligus = perHari.values.any((v) => v >= 5);
+
+    // Hari sempurna: minimal 2 kebiasaan terjadwal di hari itu dan semuanya selesai.
+    // Kebiasaan "N kali per minggu" tidak punya hari tetap, jadi dilewati.
+    var hariSempurna = false;
+    final terjadwal = habits
+        .where((h) => !h.diarsipkan && h.frekuensi.type != FrequencyType.perMinggu)
+        .toList();
+    if (terjadwal.length >= 2) {
+      for (final key in perHari.keys) {
+        final d = parseKey(key);
+        var jadwal = 0;
+        var semua = true;
+        for (final h in terjadwal) {
+          if (!h.isScheduledOn(d)) continue;
+          jadwal++;
+          if (!(done[h.id] ?? <String>{}).contains(key)) {
+            semua = false;
+            break;
+          }
+        }
+        if (semua && jadwal >= 2) {
+          hariSempurna = true;
+          break;
+        }
+      }
+    }
+
+    // Sebulan sempurna: satu kebiasaan menyelesaikan semua jadwalnya dalam satu
+    // bulan kalender penuh (kebiasaan sudah ada sejak tanggal 1 bulan itu).
+    var sebulan = false;
+    final hariIni = dayOnly(today);
+    for (final h in habits) {
+      if (sebulan) break;
+      if (h.frekuensi.type == FrequencyType.perMinggu) continue;
+      final s = done[h.id] ?? <String>{};
+      final mulai = parseKey(h.tanggalMulai);
+      var bulan = mulai.day == 1
+          ? DateTime(mulai.year, mulai.month, 1)
+          : DateTime(mulai.year, mulai.month + 1, 1);
+      while (true) {
+        final akhir = DateTime(bulan.year, bulan.month + 1, 0);
+        if (akhir.isAfter(hariIni)) break;
+        var jadwal = 0, ok = 0;
+        for (var d = bulan; !d.isAfter(akhir); d = addDays(d, 1)) {
+          if (!h.isScheduledOn(d)) continue;
+          jadwal++;
+          if (s.contains(dateKey(d))) ok++;
+        }
+        if (jadwal >= 4 && ok == jadwal) {
+          sebulan = true;
+          break;
+        }
+        bulan = DateTime(bulan.year, bulan.month + 1, 1);
+      }
+    }
+
+    // Pagi hari (centang antara 04.00 dan 08.00) dan jumlah catatan.
+    var pagi = false;
+    var catatan = 0;
+    for (final m in logs.values) {
+      for (final l in m.values) {
+        final w = l.waktu;
+        if (l.selesai && w != null && w.compareTo('04:00') >= 0 && w.compareTo('08:00') < 0) {
+          pagi = true;
+        }
+        if (l.catatan != null && l.catatan!.trim().isNotEmpty) catatan++;
+      }
+    }
+
     return [
       BadgeInfo('Langkah pertama', 'Centang kebiasaan pertamamu', Icons.flag, total >= 1),
       BadgeInfo('Seminggu penuh', 'Streak 7 hari', Icons.local_fire_department, terpanjang >= 7),
       BadgeInfo('Bangkit lagi', 'Mulai lagi setelah streak putus', Icons.replay, bangkit),
       BadgeInfo('Konsisten 30 hari', 'Streak 30 hari', Icons.emoji_events, terpanjang >= 30),
       BadgeInfo('Seratus hari', 'Streak 100 hari', Icons.military_tech, terpanjang >= 100),
+      BadgeInfo('Pagi hari', 'Centang kebiasaan antara jam 04.00 dan 08.00', Icons.wb_sunny, pagi),
+      BadgeInfo('Hari sempurna', 'Semua kebiasaan terjadwal selesai dalam satu hari (min. 2)',
+          Icons.stars, hariSempurna),
+      BadgeInfo('Lima sekaligus', 'Selesaikan 5 kebiasaan dalam satu hari', Icons.checklist, limaSekaligus),
+      BadgeInfo('Sebulan sempurna', 'Semua jadwal satu kebiasaan selesai dalam satu bulan kalender',
+          Icons.calendar_month, sebulan),
+      BadgeInfo('Si pencatat', 'Tulis 10 catatan harian', Icons.edit_note, catatan >= 10),
+      BadgeInfo('Seratus centang', 'Total 100 centang', Icons.done_all, total >= 100),
     ];
   }
 }
