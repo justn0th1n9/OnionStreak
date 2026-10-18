@@ -10,7 +10,7 @@ import 'firebase_options.dart';
 import 'repositories/firestore_habit_repository.dart';
 import 'repositories/habit_repository.dart';
 import 'repositories/memory_habit_repository.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_shell.dart';
 import 'services/notification_service.dart';
 import 'state/app_mode.dart';
 import 'state/habit_store.dart';
@@ -80,7 +80,7 @@ class OnionStreakApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const HomeScreen(),
+      home: const MainShell(),
     );
   }
 }

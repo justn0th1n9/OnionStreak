@@ -15,8 +15,6 @@ import '../widgets/habit_tile.dart';
 import '../widgets/onion_mascot.dart';
 import 'habit_detail_screen.dart';
 import 'habit_form_screen.dart';
-import 'settings_screen.dart';
-import 'stats_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -27,18 +25,6 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('OnionStreak'),
-        actions: [
-          IconButton(
-            tooltip: 'Statistik',
-            icon: const Icon(Icons.insights_outlined),
-            onPressed: () => buka(context, const StatsScreen()),
-          ),
-          IconButton(
-            tooltip: 'Pengaturan',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => buka(context, const SettingsScreen()),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => buka(context, const HabitFormScreen()),
