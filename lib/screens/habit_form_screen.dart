@@ -31,7 +31,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
   late Set<int> _hari;
   late int _perMinggu;
   late bool _punyaTarget;
-  String? _pengingat;
+  late List<String> _pengingat;
 
   bool get _edit => widget.habit != null;
 
@@ -51,7 +51,7 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
     _punyaTarget = target != null;
     _target = TextEditingController(text: target?.toString() ?? '');
     _satuan = TextEditingController(text: h?.satuan ?? t?.satuan ?? '');
-    _pengingat = h?.pengingat;
+    _pengingat = List<String>.of(h?.pengingat ?? const <String>[]);
   }
 
   @override
@@ -74,15 +74,19 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
   }
 
   Future<void> _pilihJam() async {
-    final awal = _pengingat != null
-        ? TimeOfDay(
-            hour: int.parse(_pengingat!.split(':')[0]),
-            minute: int.parse(_pengingat!.split(':')[1]))
-        : const TimeOfDay(hour: 7, minute: 0);
-    final t = await showTimePicker(context: context, initialTime: awal);
+    Future<void> _tambahJam() async {
+    if (_pengingat.length >= kMaksPengingat) return;
+    final t = await showTimePicker(
+        context: context, initialTime: const TimeOfDay(hour: 7, minute: 0));
     if (t == null || !mounted) return;
-    setState(() => _pengingat =
-        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}');
+    final jam =
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    if (_pengingat.contains(jam)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Pengingat $jam sudah ada')));
+      return;
+    }
+    setState(() => _pengingat = [..._pengingat, jam]..sort());
     await context.read<HabitStore>().notifications.mintaIzin();
   }
 
@@ -260,19 +264,49 @@ class _HabitFormScreenState extends State<HabitFormScreen> {
                 ],
               ),
             const Divider(height: 32),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.alarm),
-              title: const Text('Pengingat harian'),
-              subtitle: Text(_pengingat ?? 'Tidak aktif'),
-              trailing: _pengingat == null
-                  ? null
-                  : IconButton(
-                      tooltip: 'Matikan pengingat',
-                      icon: const Icon(Icons.close),
-                      onPressed: () => setState(() => _pengingat = null),
-                    ),
-              onTap: _pilihJam,
+             Row(
+              children: [
+                const Icon(Icons.alarm),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text('Pengingat harian',
+                      style: Theme.of(context).textTheme.titleMedium),
+                ),
+                TextButton.icon(
+                  onPressed:
+                      _pengingat.length >= kMaksPengingat ? null : _tambahJam,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tambah jam'),
+                ),
+              ],
+            ),
+            if (_pengingat.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 40, bottom: 4),
+                child: Text('Tidak aktif', style: Theme.of(context).textTheme.bodyMedium),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(left: 40),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final jam in _pengingat)
+                      InputChip(
+                        label: Text(jam),
+                        onDeleted: () => setState(() =>
+                            _pengingat = _pengingat.where((e) => e != jam).toList()),
+                      ),
+                  ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(left: 40, top: 4),
+              child: Text(
+                'Maksimal $kMaksPengingat jam. Pengingat tidak muncul bila kebiasaan hari itu sudah dicentang.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton(onPressed: _simpan, child: const Text('Simpan')),
