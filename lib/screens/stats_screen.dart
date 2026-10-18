@@ -62,7 +62,9 @@ class _StatsScreenState extends State<StatsScreen> {
     final urut = [...aktif]
       ..sort((a, b) => store.streak(b).current.compareTo(store.streak(a).current));
     final wawasan = StatsService.wawasan(aktif, done, today);
-    final lencana = StatsService.lencana(store.all, done, today);
+    final lencana = StatsService.lencana(store.all, done, today, logs: {
+      for (final h in store.all) h.id: store.logsOf(h.id),
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Statistik')),
