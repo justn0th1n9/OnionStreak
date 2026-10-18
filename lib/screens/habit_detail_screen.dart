@@ -169,7 +169,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
                         ),
                         if (h.punyaTarget)
                           Text('Target: ${h.targetAngka} ${h.satuan ?? ''}'),
-                        if (h.pengingat != null) Text('Pengingat: ${h.pengingat}'),
+                        if (h.punyaPengingat) Text('Pengingat: ${h.pengingat.join(', ')}'),
                         const SizedBox(height: 8),
                         Row(
                           children: [
