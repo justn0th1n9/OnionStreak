@@ -1,5 +1,6 @@
 import '../utils/tanggal.dart';
 import 'frequency.dart';
+const int kMaksPengingat = 5;
 
 class Habit {
   final String id;
@@ -9,7 +10,7 @@ class Habit {
   final Frequency frekuensi;
   final int? targetAngka;
   final String? satuan;
-  final String? pengingat; // "HH:mm"
+  final List<String> pengingat; // "HH:mm"
   final String tanggalMulai; // YYYY-MM-DD
   final bool diarsipkan;
   final int urutan;
@@ -24,7 +25,7 @@ class Habit {
     required this.frekuensi,
     this.targetAngka,
     this.satuan,
-    this.pengingat,
+    this.pengingat = const [],
     required this.tanggalMulai,
     this.diarsipkan = false,
     this.urutan = 0,
@@ -33,7 +34,23 @@ class Habit {
   });
 
   bool get punyaTarget => targetAngka != null && targetAngka! > 0;
+  
+ bool get punyaPengingat => pengingat.isNotEmpty;
 
+  static List<String> bacaPengingat(Object? v) {
+    final Iterable<String> mentah;
+    if (v is String) {
+      mentah = v.isEmpty ? const <String>[] : [v];
+    } else if (v is List) {
+      mentah = v.whereType<String>();
+    } else {
+      return const [];
+    }
+    final rapi = mentah.where((e) => RegExp(r'^\d{2}:\d{2}$').hasMatch(e)).toSet().toList()
+      ..sort();
+    return rapi.length > kMaksPengingat ? rapi.sublist(0, kMaksPengingat) : rapi;
+  }
+  
   bool isPausedOn(DateTime d) {
     if (jedaDari == null || jedaSampai == null) return false;
     final k = dateKey(d);
@@ -58,7 +75,7 @@ class Habit {
     Frequency? frekuensi,
     Object? targetAngka = _u,
     Object? satuan = _u,
-    Object? pengingat = _u,
+    List<String>? pengingat,
     String? tanggalMulai,
     bool? diarsipkan,
     int? urutan,
@@ -74,8 +91,7 @@ class Habit {
         targetAngka:
             identical(targetAngka, _u) ? this.targetAngka : targetAngka as int?,
         satuan: identical(satuan, _u) ? this.satuan : satuan as String?,
-        pengingat:
-            identical(pengingat, _u) ? this.pengingat : pengingat as String?,
+        pengingat: pengingat ?? this.pengingat,
         tanggalMulai: tanggalMulai ?? this.tanggalMulai,
         diarsipkan: diarsipkan ?? this.diarsipkan,
         urutan: urutan ?? this.urutan,
@@ -107,7 +123,7 @@ class Habit {
         frekuensi: Frequency.fromMap(m['frekuensi'] as Map<String, dynamic>?),
         targetAngka: (m['targetAngka'] as num?)?.toInt(),
         satuan: m['satuan'] as String?,
-        pengingat: m['pengingat'] as String?,
+        pengingat: bacaPengingat(m['pengingat']),
         tanggalMulai:
             (m['tanggalMulai'] ?? dateKey(DateTime.now())) as String,
         diarsipkan: (m['diarsipkan'] ?? false) as bool,
