@@ -64,6 +64,19 @@ class HabitStore extends ChangeNotifier {
     return c;
   }
 
+DateTime? tundaPengingat(Habit h) {
+    final hariIni = dayOnly(DateTime.now());
+    if (h.frekuensi.type == FrequencyType.perMinggu &&
+        selesaiMingguIni(h) >= h.frekuensi.timesPerWeek) {
+      return addDays(weekStart(hariIni), 7);
+    }
+    if (isDone(h, hariIni)) return addDays(hariIni, 1);
+    return null;
+  }
+
+  void _sinkronPengingat() =>
+      unawaited(notifications.sinkron(_habits, tundaPengingat));
+  
   // ---------- langganan data ----------
   void _listen() {
     loading = true;
@@ -88,6 +101,10 @@ class HabitStore extends ChangeNotifier {
       _logSubs[id] = repo.watchLogs(id).listen((m) {
         _logs[id] = m;
         notifyListeners();
+        final h = byId(id);
+        if (h != null) {
+          unawaited(notifications.jadwalkan(h, tundaHingga: tundaPengingat(h)));
+        }
       }, onError: (Object e) {
         error = e.toString();
         notifyListeners();
@@ -97,7 +114,7 @@ class HabitStore extends ChangeNotifier {
     error = null;
     notifyListeners();
     // Selaraskan pengingat dengan daftar kebiasaan (juga memulihkan pengingat di perangkat baru).
-    unawaited(notifications.sinkron(list));
+   _sinkronPengingat();
   }
 
   /// Dipanggil setelah pengguna masuk/keluar akun (uid berubah).
@@ -168,10 +185,26 @@ class HabitStore extends ChangeNotifier {
     if (kosong) {
       await repo.deleteLog(h.id, key);
     } else {
+      // Jam centang hanya dicatat untuk hari ini (dan dipertahankan saat catatan
+      // diubah). Koreksi hari lalu tidak punya jam yang bermakna.
+      final lama = logOn(h, d);
+      final sekarang = DateTime.now();
+      String? waktu;
+      if (done) {
+        waktu = lama?.selesai == true ? lama?.waktu : null;
+        if (waktu == null && sameDay(d, sekarang)) {
+          waktu =
+              '${sekarang.hour.toString().padLeft(2, '0')}:${sekarang.minute.toString().padLeft(2, '0')}';
+        }
+      }
       await repo.saveLog(
           h.id,
           HabitLog(
-              tanggal: key, selesai: done, jumlah: amount, catatan: note?.trim()));
+              tanggal: key,
+              selesai: done,
+              jumlah: amount,
+              catatan: note?.trim(),
+              waktu: waktu));
     }
 
     final set = doneKeys(h.id);
